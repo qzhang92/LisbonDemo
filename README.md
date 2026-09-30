@@ -4,7 +4,8 @@ Lisbon Atlas is a portable static Microsoft Edge/Copilot travel corpus for plann
 
 ## Note
 This is a duplicate version of `https://github.com/guneetsingh097/LisbonDemo`. If you have any questions, please contact Guneet.  
-This duplicate is created due to repo auth issues.
+This duplicate is created due to repo auth issues.   
+This is on personal repo due to auth issues too.
 
 ## What is included
 
