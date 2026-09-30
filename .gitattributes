@@ -4,3 +4,4 @@
 *.gif -diff
 *.webp -diff
 *.part -diff
+videos/*.part[0-9][0-9][0-9] -diff

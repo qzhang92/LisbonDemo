@@ -13,7 +13,7 @@ This is on personal repo due to auth issues too.
 - 210 core site pages: home, about, offerings, resources, detail guide, FAQ, and contact for every property.
 - A quick navigator at `#/navigate`.
 - A relationship matrix at `#/matrix`.
-- A full-bleed Lisbon Aerial Loop page at `#/watch` that autoplays muted, loops continuously, provides native playback and seek controls, and shows loading progress while the original 4K Pexels MP4 chunks download.
+- A full-bleed Lisbon Aerial Loop page at `#/watch` that provides native playback, audio, and seek controls, loops continuously after the user presses Play, and shows loading progress while the MP4 chunks download.
 - Bundled media and attribution files:
   - `IMAGE-ATTRIBUTION.md`
   - `IMAGE-ATTRIBUTION.csv`
@@ -87,7 +87,7 @@ Because all app navigation uses hash routes, deep links such as `https://<owner>
 - `sites-a.js`, `sites-b.js` — structured data for all 30 sites
 - `sites/` — 30 bespoke site renderers and scoped CSS files
 - `images/`, `images-pexels/` — bundled referenced image assets only
-- `videos/lisbon-aerial-4823566-4k.part001` through `.part007` — original 4K Pexels MP4 split into GitHub-safe chunks and reassembled in-browser
+- `videos/lisbon-new.part001` through `.part021` — 4K MP4 with audio split into GitHub-safe chunks and reassembled in-browser
 - `PUBLIC-URLS.csv` — public URL inventory
 - `server.mjs` — tiny local static server
 
