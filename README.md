@@ -13,7 +13,7 @@ This is on personal repo due to auth issues too.
 - 210 core site pages: home, about, offerings, resources, detail guide, FAQ, and contact for every property.
 - A quick navigator at `#/navigate`.
 - A relationship matrix at `#/matrix`.
-- A full-bleed Lisbon Aerial Loop page at `#/watch` that autoplays muted, loops continuously, and shows loading progress while the original 4K Pexels MP4 chunks download.
+- A full-bleed Lisbon Aerial Loop page at `#/watch` that autoplays muted, loops continuously, provides native playback and seek controls, and shows loading progress while the original 4K Pexels MP4 chunks download.
 - Bundled media and attribution files:
   - `IMAGE-ATTRIBUTION.md`
   - `IMAGE-ATTRIBUTION.csv`
