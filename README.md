@@ -2,6 +2,10 @@
 
 Lisbon Atlas is a portable static Microsoft Edge/Copilot travel corpus for planning a trip to Lisbon, Portugal. It contains 30 independent travel websites, a quick navigation hub, a cross-source relationship matrix, standards/source documentation, and a full-bleed looping aerial video page.
 
+## Note
+This is a duplicate version of `https://github.com/guneetsingh097/LisbonDemo`. If you have any questions, please contact Guneet.  
+This duplicate is created due to repo auth issues.
+
 ## What is included
 
 - 30 travel websites with bespoke layouts, type systems, colors, voices, and navigation patterns.
