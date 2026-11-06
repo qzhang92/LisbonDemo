@@ -73,6 +73,7 @@ function ensureBespokeCss(id) {
 }
 const sites = [...sitesA, ...sitesB];
 const app = document.querySelector("#app");
+let disposeLisbonVideo;
 const scenarios = [
   ["Where should I stay?", [1, 2, 3, 4, 10, 29]],
   ["What neighborhood is best for families?", [1, 4, 10, 22, 29]],
@@ -110,17 +111,20 @@ function escapeHtml(value = "") {
     .replaceAll('"', "&quot;");
 }
 function route() {
+  disposeLisbonVideo?.();
+  disposeLisbonVideo = undefined;
   const hash = location.hash.replace(/^#\/?/, "");
   const [page, id, section] = hash.split("/");
   if (page === "site" && id) return renderSite(Number(id), section || "home");
   if (page === "watch") return renderWatch();
+  if (page === "watch1") return renderWatch(true);
   if (page === "navigate") return renderNavigator();
   if (page === "docs") return renderDocs();
   if (page === "matrix") return renderMatrix();
   return renderPortal();
 }
 function portalHeader(active = "") {
-  return ` <header class="portal-header"><a class="portal-brand" href="#/"><span class="portal-monogram">LA</span><span><b>Lisbon Atlas</b><small>Travel content ecosystem</small></span></a><nav aria-label="Ecosystem navigation"><a class="${active === "sites" ? "active" : ""}" href="#/">30 sites</a><a class="${active === "watch" ? "active" : ""}" href="#/watch">Video</a><a class="${active === "navigate" ? "active" : ""}" href="#/navigate">Quick navigate</a><a class="${active === "matrix" ? "active" : ""}" href="#/matrix">Relationship matrix</a><a class="${active === "docs" ? "active" : ""}" href="#/docs">Standards & sources</a></nav><span class="-pill">30-site travel portfolio</span></header>`;
+  return ` <header class="portal-header"><a class="portal-brand" href="#/"><span class="portal-monogram">LA</span><span><b>Lisbon Atlas</b><small>Travel content ecosystem</small></span></a><nav aria-label="Ecosystem navigation"><a class="${active === "sites" ? "active" : ""}" href="#/">30 sites</a><a class="${active === "watch" ? "active" : ""}" href="#/watch">Video</a><a class="${active === "watch1" ? "active" : ""}" href="#/watch1">Video (Safari)</a><a class="${active === "navigate" ? "active" : ""}" href="#/navigate">Quick navigate</a><a class="${active === "matrix" ? "active" : ""}" href="#/matrix">Relationship matrix</a><a class="${active === "docs" ? "active" : ""}" href="#/docs">Standards & sources</a></nav><span class="-pill">30-site travel portfolio</span></header>`;
 }
 function renderPortal() {
   document.title = "Lisbon Atlas — 30 Travel Websites";
@@ -174,12 +178,14 @@ function renderSite(id, section) {
   }
   renderPortal();
 }
-function renderWatch() {
-  document.title = "Lisbon Aerial Loop — Lisbon Atlas";
+function renderWatch(safariCompatible = false) {
+  document.title = safariCompatible
+    ? "Lisbon Aerial Loop (Safari compatible) — Lisbon Atlas"
+    : "Lisbon Aerial Loop — Lisbon Atlas";
   app.innerHTML = `<main class="watch-page full-bleed-video"><div class="video-frame" id="southridge-video-frame"><video id="lisbon-4k-video" controls loop playsinline preload="auto" poster="images-pexels/bridge-river-aerial-1.jpg" aria-label="Looping 4K aerial footage of Lisbon and Sintra"></video><div class="video-loading" id="video-loading" aria-live="polite"><span id="video-loading-label">Loading 4K video…</span><div class="video-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Video loading progress"><span id="video-progress-fill"></span></div></div></div></main>`;
-  loadLisbonVideo();
+  loadLisbonVideo(safariCompatible);
 }
-async function loadLisbonVideo() {
+async function loadLisbonVideo(safariCompatible = false) {
   const video = document.querySelector("#lisbon-4k-video");
   const status = document.querySelector("#video-loading");
   const statusLabel = document.querySelector("#video-loading-label");
@@ -192,26 +198,96 @@ async function loadLisbonVideo() {
     if (progressFill) progressFill.style.width = `${percent}%`;
   };
   if (!video) return;
-  const parts = Array.from(
-    { length: 21 },
-    (_, index) => `videos/lisbon-new.part${String(index + 1).padStart(3, "0")}`,
-  );
+  const controller = new AbortController();
+  let objectUrl;
+  disposeLisbonVideo = () => {
+    controller.abort();
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  };
+  const showError = (error) => {
+    status.hidden = false;
+    statusLabel.textContent =
+      "Unable to load the 4K video. Check your connection and reload to try again.";
+    progress.hidden = true;
+    console.error(error);
+  };
+  video.addEventListener("error", () => {
+    showError(video.error);
+  }, { signal: controller.signal });
+  if (safariCompatible && video.canPlayType("application/vnd.apple.mpegurl")) {
+    const updateBuffering = () => {
+      if (!Number.isFinite(video.duration) || video.duration <= 0) return;
+      let bufferedAhead = 0;
+      for (let index = 0; index < video.buffered.length; index++) {
+        if (video.buffered.start(index) <= video.currentTime &&
+            video.buffered.end(index) >= video.currentTime) {
+          bufferedAhead = video.buffered.end(index) - video.currentTime;
+          break;
+        }
+      }
+      const target = Math.min(10, video.duration - video.currentTime);
+      const percent = target > 0
+        ? Math.min(100, Math.round(bufferedAhead / target * 100))
+        : 100;
+      statusLabel.textContent = `Buffering 4K video ${percent}%`;
+      progress.setAttribute("aria-valuenow", String(percent));
+      progressFill.style.width = `${percent}%`;
+    };
+    const options = { signal: controller.signal };
+    video.addEventListener("progress", updateBuffering, options);
+    video.addEventListener("waiting", () => {
+      if (video.error) return;
+      status.hidden = false;
+      updateBuffering();
+    }, options);
+    for (const event of ["loadeddata", "canplay", "playing"]) {
+      video.addEventListener(event, () => {
+        if (!video.error) status.hidden = true;
+      }, options);
+    }
+    statusLabel.textContent = "Buffering 4K video...";
+    video.src = "videos/lisbon-pages-hls/playlist.m3u8";
+    return;
+  }
   try {
+    const manifestResponse = await fetch("videos/lisbon-pages.json", {
+      signal: controller.signal,
+    });
+    if (!manifestResponse.ok) throw new Error("Unable to load the video manifest.");
+    const manifest = await manifestResponse.json();
+    if (!manifest || typeof manifest !== "object" ||
+        !Array.isArray(manifest.parts) || manifest.parts.length === 0 ||
+        !manifest.parts.every((part) =>
+          typeof part === "string" && /^videos\/lisbon-pages\.part\d{3}$/.test(part)) ||
+        !Number.isSafeInteger(manifest.size) || manifest.size <= 0 ||
+        manifest.size > 350_000_000) {
+      throw new Error("Invalid video manifest.");
+    }
+    const parts = manifest.parts;
     const buffers = [];
+    let loadedBytes = 0;
     for (let index = 0; index < parts.length; index++) {
       updateProgress(index, parts.length);
-      const response = await fetch(parts[index]);
+      const response = await fetch(parts[index], { signal: controller.signal });
       if (!response.ok) throw new Error(`Unable to load ${parts[index]}`);
-      buffers.push(await response.arrayBuffer());
+      const buffer = await response.arrayBuffer();
+      loadedBytes += buffer.byteLength;
+      if (loadedBytes > manifest.size) throw new Error("Video download exceeds expected size.");
+      buffers.push(buffer);
       updateProgress(index + 1, parts.length);
     }
+    if (controller.signal.aborted) return;
+    if (loadedBytes !== manifest.size) throw new Error("Incomplete video download.");
     const blob = new Blob(buffers, { type: "video/mp4" });
-    video.src = URL.createObjectURL(blob);
-    if (status) status.remove();
+    buffers.length = 0;
+    objectUrl = URL.createObjectURL(blob);
+    video.src = objectUrl;
+    status.hidden = true;
   } catch (error) {
-    if (statusLabel)
-      statusLabel.textContent = "Unable to load the bundled 4K video chunks.";
-    console.error(error);
+    if (!controller.signal.aborted) showError(error);
   }
 }
 function renderNavigator() {

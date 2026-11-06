@@ -13,7 +13,8 @@ This is on personal repo due to auth issues too.
 - 210 core site pages: home, about, offerings, resources, detail guide, FAQ, and contact for every property.
 - A quick navigator at `#/navigate`.
 - A relationship matrix at `#/matrix`.
-- A full-bleed Lisbon Aerial Loop page at `#/watch` that provides native playback, audio, and seek controls, loops continuously after the user presses Play, and shows loading progress while the MP4 chunks download.
+- A full-bleed Lisbon Aerial Loop page at `#/watch` that retains MP4 chunk playback, audio, seek controls, looping after the user presses Play, and download progress.
+- A separate Safari-compatible video page at `#/watch1`: Safari streams 4K HLS segments with buffering feedback; browsers without native HLS support fall back to the MP4 chunk loader. Both pages share the same compressed video assets.
 - Bundled media and attribution files:
   - `IMAGE-ATTRIBUTION.md`
   - `IMAGE-ATTRIBUTION.csv`
@@ -48,7 +49,7 @@ ES modules should be served over HTTP; do not open `index.html` directly with a 
 
 ## Deploy anywhere
 
-Upload the repository contents to any static host that can serve files with normal MIME types:
+Upload the tracked repository contents (excluding git-ignored source MP4s) to any static host that can serve files with normal MIME types:
 
 - GitHub Pages
 - Azure Static Web Apps
@@ -66,6 +67,8 @@ Required MIME types:
 - `.css` -> `text/css`
 - `.jpg` -> `image/jpeg`
 - video chunks -> `application/octet-stream` or `video/mp4`
+- `.m3u8` -> `application/vnd.apple.mpegurl`
+- `.m4s`, `.mp4` -> `video/mp4`
 - `.csv` -> `text/csv`
 - `.md` -> `text/markdown` or `text/plain`
 
@@ -77,7 +80,7 @@ For GitHub Pages, publish the `main` branch from the repository root (`/`). Afte
 https://<owner>.github.io/<repo>/
 ```
 
-Because all app navigation uses hash routes, deep links such as `https://<owner>.github.io/<repo>/#/watch` work without extra configuration.
+Because all app navigation uses hash routes, deep links such as `https://<owner>.github.io/<repo>/#/watch` and `https://<owner>.github.io/<repo>/#/watch1` work without extra configuration.
 
 ## Key files
 
@@ -87,9 +90,32 @@ Because all app navigation uses hash routes, deep links such as `https://<owner>
 - `sites-a.js`, `sites-b.js` — structured data for all 30 sites
 - `sites/` — 30 bespoke site renderers and scoped CSS files
 - `images/`, `images-pexels/` — bundled referenced image assets only
-- `videos/lisbon-new.part001` through `.part021` — 4K MP4 with audio split into GitHub-safe chunks and reassembled in-browser
+- `videos/lisbon-pages.json`, `videos/lisbon-pages.part*` — compressed 4K MP4 with audio, split into GitHub-safe chunks and reassembled in browsers without native HLS
+- `videos/lisbon-pages-hls/` — the same compressed 4K H.264/AAC video packaged as native HLS for Safari, without assembling a whole-video blob in JavaScript memory
 - `PUBLIC-URLS.csv` — public URL inventory
 - `server.mjs` — tiny local static server
+
+### Safari video delivery
+
+Deploy the entire `videos/` directory, including the MP4 chunk manifest and parts, HLS playlist, initialization MP4, and all media segments. The existing `#/watch` page always uses the MP4 chunk loader. The new `#/watch1` page enables native HLS when supported, detected with `canPlayType`, not a browser-name check; other browsers fall back to the same MP4 chunks. A "Video (Safari)" navigation link opens the new page. Navigating between routes cancels downloads and releases the previous video source; playback errors are shown without automatic reloads.
+
+The video retains 3840 × 2160 resolution and audio but uses lossy compression to fit GitHub Pages. Its two delivery formats together with the rest of the site must remain below 800 MB, leaving room under Pages' 1 GB published-site limit. Splitting files only addresses GitHub's per-file limit; it does not reduce total deployment size. Superseded video assets are not included in the published tree.
+
+The local server supports byte-range requests and HEAD responses for native media playback. Static hosts should also support byte ranges and the MIME types above.
+
+To regenerate the compressed video and both delivery formats from the locally available (git-ignored) source, install FFmpeg and run:
+
+```powershell
+ffmpeg -hide_banner -nostdin -i Lisbon-new.mp4 -map 0:v:0 -map 0:a:0 -c:v libx264 -preset veryfast -threads 4 -profile:v main -level:v 5.1 -pix_fmt yuv420p -b:v 12M -maxrate 12M -bufsize 24M -g 120 -keyint_min 120 -sc_threshold 0 -c:a aac -b:a 128k -movflags +faststart lisbon-pages.mp4
+node scripts\package-video.mjs lisbon-pages.mp4
+Remove-Item -LiteralPath lisbon-pages.mp4
+```
+
+HLS segments end on four-second keyframes. MP4 chunks are at most 95 MiB. The packaging script rejects compressed inputs over 350 MB. Video regression tests verify all generated files, the reconstructed MP4 size, and the total deployable tree size. Root MP4 source files remain git-ignored.
+
+Commit both the replacement assets and deletion of superseded assets in the same change. Use Git to upload these files; browser-based uploads have a lower per-file limit. Removing old assets reduces the deployed site size, but does not remove them from Git history.
+
+Run the video regression tests with `node --test tests\video.test.mjs`.
 
 ## Licensing and attribution
 
