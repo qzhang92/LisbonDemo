@@ -126,9 +126,11 @@ The supplied `GettyImages.mov` uses ProRes video and PCM audio and is over 1 GB.
 To regenerate the MP4 and poster with FFmpeg:
 
 ```powershell
-ffmpeg -hide_banner -nostdin -i GettyImages.mov -map 0:v:0 -map 0:a:0 -c:v libx264 -preset veryfast -threads 4 -profile:v main -level:v 5.1 -pix_fmt yuv420p -b:v 12M -maxrate 16M -bufsize 24M -c:a aac -b:a 192k -movflags +faststart videos\getty-images.mp4
+ffmpeg -hide_banner -nostdin -i GettyImages.mov -map 0:v:0 -map 0:a:0 -c:v libx264 -preset slow -threads 4 -profile:v high -level:v 5.1 -pix_fmt yuv420p -crf 14 -maxrate 60M -bufsize 60M -c:a aac -b:a 320k -movflags +faststart videos\getty-images.mp4
 ffmpeg -hide_banner -nostdin -ss 0.5 -i videos\getty-images.mp4 -frames:v 1 -vf "scale=1280:-2" -q:v 3 -update 1 videos\getty-images-poster.jpg
 ```
+
+The higher-quality version uses CRF 14, the slow H.264 preset, and 320 kbps AAC instead of the earlier 12 Mbps video encode. Its bitrate ceiling keeps the short clip within GitHub's per-file limit and the site's size budget. It retains the full 11.52-second duration, 3840 × 2160 resolution, and 25 fps. This is still a lossy, browser-compatible 8-bit 4:2:0 conversion of the 10-bit 4:2:2 ProRes original, not an identical-quality copy. The player versions its media URLs so browsers do not reuse the previous lower-quality encode from cache.
 
 Deploy both generated files. The regression tests include them in the complete site's 800 MB size budget. Confirm that your GettyImages license permits the intended public web use before publishing; the supplied file's license details were not provided.
 

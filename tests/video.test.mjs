@@ -177,7 +177,7 @@ test("GettyImages plays directly without loading Lisbon chunks or HLS", async ()
   for (const native of [true, false]) {
     const state = setup({ native });
     await state.context.loadLisbonVideo(false, "getty");
-    assert.equal(state.video.src, "videos/getty-images.mp4");
+    assert.equal(state.video.src, "videos/getty-images.mp4?v=20261109-hq1");
     assert.equal(state.requests.length, 0);
     assert.equal(state.blob, undefined);
     state.video.dispatchEvent(new Event("loadeddata"));
@@ -211,7 +211,7 @@ test("GettyImages renderer retains full-bleed playback controls and uses its own
   assert.equal(context.document.title, "GettyImages Loop — Lisbon Atlas");
   assert.match(context.app.innerHTML, /full-bleed-video/);
   assert.match(context.app.innerHTML, /controls loop playsinline/);
-  assert.match(context.app.innerHTML, /poster="videos\/getty-images-poster\.jpg"/);
+  assert.match(context.app.innerHTML, /poster="videos\/getty-images-poster\.jpg\?v=20261109-hq1"/);
   assert.match(context.app.innerHTML, /aria-label="Looping 4K GettyImages video"/);
   assert.doesNotMatch(context.app.innerHTML, /\bautoplay\b/);
   assert.deepEqual(context.loaded, [false, "getty"]);
@@ -407,7 +407,7 @@ test("local server serves HLS MIME types, HEAD, and media byte ranges", async (t
     assert.equal(response.headers.get("content-length"),
       String(statSync(join(root, "videos", file)).size));
   }
-  const gettyRange = await fetch(`${base}/videos/getty-images.mp4`, {
+  const gettyRange = await fetch(`${base}/videos/getty-images.mp4?v=20261109-hq1`, {
     headers: { Range: "bytes=0-15" },
   });
   assert.equal(gettyRange.status, 206);

@@ -186,7 +186,7 @@ function renderWatch(safariCompatible = false, media = "lisbon") {
     ? "Lisbon Aerial Loop (Safari compatible) — Lisbon Atlas"
     : "Lisbon Aerial Loop — Lisbon Atlas";
   const poster = media === "getty"
-    ? "videos/getty-images-poster.jpg"
+    ? "videos/getty-images-poster.jpg?v=20261109-hq1"
     : "images-pexels/bridge-river-aerial-1.jpg";
   const label = media === "getty"
     ? "Looping 4K GettyImages video"
@@ -227,7 +227,7 @@ async function loadLisbonVideo(safariCompatible = false, media = "lisbon") {
     showError(video.error);
   }, { signal: controller.signal });
   const nativeSource = media === "getty"
-    ? "videos/getty-images.mp4"
+    ? "videos/getty-images.mp4?v=20261109-hq1"
     : safariCompatible && video.canPlayType("application/vnd.apple.mpegurl")
       ? "videos/lisbon-pages-hls/playlist.m3u8"
       : null;
