@@ -118,17 +118,18 @@ function route() {
   if (page === "site" && id) return renderSite(Number(id), section || "home");
   if (page === "watch") return renderWatch();
   if (page === "watch1") return renderWatch(true);
+  if (page === "watch2") return renderWatch(false, "getty");
   if (page === "navigate") return renderNavigator();
   if (page === "docs") return renderDocs();
   if (page === "matrix") return renderMatrix();
   return renderPortal();
 }
 function portalHeader(active = "") {
-  return ` <header class="portal-header"><a class="portal-brand" href="#/"><span class="portal-monogram">LA</span><span><b>Lisbon Atlas</b><small>Travel content ecosystem</small></span></a><nav aria-label="Ecosystem navigation"><a class="${active === "sites" ? "active" : ""}" href="#/">30 sites</a><a class="${active === "watch" ? "active" : ""}" href="#/watch">Video</a><a class="${active === "watch1" ? "active" : ""}" href="#/watch1">Video (Safari)</a><a class="${active === "navigate" ? "active" : ""}" href="#/navigate">Quick navigate</a><a class="${active === "matrix" ? "active" : ""}" href="#/matrix">Relationship matrix</a><a class="${active === "docs" ? "active" : ""}" href="#/docs">Standards & sources</a></nav><span class="-pill">30-site travel portfolio</span></header>`;
+  return ` <header class="portal-header"><a class="portal-brand" href="#/"><span class="portal-monogram">LA</span><span><b>Lisbon Atlas</b><small>Travel content ecosystem</small></span></a><nav aria-label="Ecosystem navigation"><a class="${active === "sites" ? "active" : ""}" href="#/">30 sites</a><a class="${active === "watch" ? "active" : ""}" href="#/watch">Video</a><a class="${active === "watch1" ? "active" : ""}" href="#/watch1">Video (Safari)</a><a class="${active === "watch2" ? "active" : ""}" href="#/watch2">GettyImages video</a><a class="${active === "navigate" ? "active" : ""}" href="#/navigate">Quick navigate</a><a class="${active === "matrix" ? "active" : ""}" href="#/matrix">Relationship matrix</a><a class="${active === "docs" ? "active" : ""}" href="#/docs">Standards & sources</a></nav><span class="-pill">30-site travel portfolio</span></header>`;
 }
 function renderPortal() {
   document.title = "Lisbon Atlas — 30 Travel Websites";
-  app.innerHTML = ` ${portalHeader("sites")} <main><section class="portal-hero"><div class="hero-grid"><div><p class="kicker">Microsoft Edge + Copilot travel corpus</p><h1>Thirty doors into one unforgettable city.</h1><p class="lead">An interconnected collection of original, static-first travel websites designed for retrieval, grounding, comparison, summarization, and itinerary creation.</p><div class="hero-actions"><a class="button dark" href="#/site/1">Explore the first site</a><a class="button ghost" href="#/watch">Watch the Lisbon video</a><a class="button ghost" href="#/matrix">See how the sources connect</a></div></div><div class="hero-stat-card"><div><strong>30</strong><span>independent properties</span></div><div><strong>${sites.reduce((n, s) => n + s.faqs.length, 0)}+</strong><span>traveler Q&As</span></div><div><strong>10</strong><span>reasoning scenarios</span></div><div><strong>0</strong><span>real commercial entities</span></div></div></div></section><section class="catalog-section"><div class="section-heading"><div><p class="kicker">Master inventory</p><h2>Browse the ecosystem</h2></div><label class="search-box"><span>Search</span><input id="site-search" type="search" placeholder="Try “accessible,” “family,” or “food”"></label></div><div class="site-grid" id="site-grid">${sites.map(siteCard).join("")}</div></section><section class="scenario-band"><div class="section-heading light"><div><p class="kicker">Built for synthesis</p><h2>Questions with more than one good source</h2></div></div><div class="scenario-grid">${scenarios
+  app.innerHTML = ` ${portalHeader("sites")} <main><section class="portal-hero"><div class="hero-grid"><div><p class="kicker">Microsoft Edge + Copilot travel corpus</p><h1>Thirty doors into one unforgettable city.</h1><p class="lead">An interconnected collection of original, static-first travel websites designed for retrieval, grounding, comparison, summarization, and itinerary creation.</p><div class="hero-actions"><a class="button dark" href="#/site/1">Explore the first site</a><a class="button ghost" href="#/watch">Watch the Lisbon video</a><a class="button ghost" href="#/watch2">Watch the GettyImages video</a><a class="button ghost" href="#/matrix">See how the sources connect</a></div></div><div class="hero-stat-card"><div><strong>30</strong><span>independent properties</span></div><div><strong>${sites.reduce((n, s) => n + s.faqs.length, 0)}+</strong><span>traveler Q&As</span></div><div><strong>10</strong><span>reasoning scenarios</span></div><div><strong>0</strong><span>real commercial entities</span></div></div></div></section><section class="catalog-section"><div class="section-heading"><div><p class="kicker">Master inventory</p><h2>Browse the ecosystem</h2></div><label class="search-box"><span>Search</span><input id="site-search" type="search" placeholder="Try “accessible,” “family,” or “food”"></label></div><div class="site-grid" id="site-grid">${sites.map(siteCard).join("")}</div></section><section class="scenario-band"><div class="section-heading light"><div><p class="kicker">Built for synthesis</p><h2>Questions with more than one good source</h2></div></div><div class="scenario-grid">${scenarios
     .map(
       ([q, ids]) =>
         ` <article><h3>${q}</h3><p>${ids
@@ -178,14 +179,22 @@ function renderSite(id, section) {
   }
   renderPortal();
 }
-function renderWatch(safariCompatible = false) {
-  document.title = safariCompatible
+function renderWatch(safariCompatible = false, media = "lisbon") {
+  document.title = media === "getty"
+    ? "GettyImages Loop — Lisbon Atlas"
+    : safariCompatible
     ? "Lisbon Aerial Loop (Safari compatible) — Lisbon Atlas"
     : "Lisbon Aerial Loop — Lisbon Atlas";
-  app.innerHTML = `<main class="watch-page full-bleed-video"><div class="video-frame" id="southridge-video-frame"><video id="lisbon-4k-video" controls loop playsinline preload="auto" poster="images-pexels/bridge-river-aerial-1.jpg" aria-label="Looping 4K aerial footage of Lisbon and Sintra"></video><div class="video-loading" id="video-loading" aria-live="polite"><span id="video-loading-label">Loading 4K video…</span><div class="video-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Video loading progress"><span id="video-progress-fill"></span></div></div></div></main>`;
-  loadLisbonVideo(safariCompatible);
+  const poster = media === "getty"
+    ? "videos/getty-images-poster.jpg"
+    : "images-pexels/bridge-river-aerial-1.jpg";
+  const label = media === "getty"
+    ? "Looping 4K GettyImages video"
+    : "Looping 4K aerial footage of Lisbon and Sintra";
+  app.innerHTML = `<main class="watch-page full-bleed-video"><div class="video-frame" id="southridge-video-frame"><video id="lisbon-4k-video" controls loop playsinline preload="auto" poster="${poster}" aria-label="${label}"></video><div class="video-loading" id="video-loading" aria-live="polite"><span id="video-loading-label">Loading 4K video…</span><div class="video-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Video loading progress"><span id="video-progress-fill"></span></div></div></div></main>`;
+  loadLisbonVideo(safariCompatible, media);
 }
-async function loadLisbonVideo(safariCompatible = false) {
+async function loadLisbonVideo(safariCompatible = false, media = "lisbon") {
   const video = document.querySelector("#lisbon-4k-video");
   const status = document.querySelector("#video-loading");
   const statusLabel = document.querySelector("#video-loading-label");
@@ -217,7 +226,12 @@ async function loadLisbonVideo(safariCompatible = false) {
   video.addEventListener("error", () => {
     showError(video.error);
   }, { signal: controller.signal });
-  if (safariCompatible && video.canPlayType("application/vnd.apple.mpegurl")) {
+  const nativeSource = media === "getty"
+    ? "videos/getty-images.mp4"
+    : safariCompatible && video.canPlayType("application/vnd.apple.mpegurl")
+      ? "videos/lisbon-pages-hls/playlist.m3u8"
+      : null;
+  if (nativeSource) {
     const updateBuffering = () => {
       if (!Number.isFinite(video.duration) || video.duration <= 0) return;
       let bufferedAhead = 0;
@@ -249,7 +263,7 @@ async function loadLisbonVideo(safariCompatible = false) {
       }, options);
     }
     statusLabel.textContent = "Buffering 4K video...";
-    video.src = "videos/lisbon-pages-hls/playlist.m3u8";
+    video.src = nativeSource;
     return;
   }
   try {

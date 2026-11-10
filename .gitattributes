@@ -7,3 +7,4 @@
 videos/*.part[0-9][0-9][0-9] -diff
 videos/lisbon-pages-hls/*.mp4 -diff
 videos/lisbon-pages-hls/*.m4s -diff
+videos/getty-images.mp4 -diff

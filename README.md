@@ -15,6 +15,7 @@ This is on personal repo due to auth issues too.
 - A relationship matrix at `#/matrix`.
 - A full-bleed Lisbon Aerial Loop page at `#/watch` that retains MP4 chunk playback, audio, seek controls, looping after the user presses Play, and download progress.
 - A separate Safari-compatible video page at `#/watch1`: Safari streams 4K HLS segments with buffering feedback; browsers without native HLS support fall back to the MP4 chunk loader. Both pages share the same compressed video assets.
+- A separate GettyImages video page at `#/watch2`, using the same full-bleed layout, native audio/seek controls, and looping after Play. The supplied MOV is converted to a browser-compatible 4K MP4.
 - Bundled media and attribution files:
   - `IMAGE-ATTRIBUTION.md`
   - `IMAGE-ATTRIBUTION.csv`
@@ -49,7 +50,7 @@ ES modules should be served over HTTP; do not open `index.html` directly with a 
 
 ## Deploy anywhere
 
-Upload the tracked repository contents (excluding git-ignored source MP4s) to any static host that can serve files with normal MIME types:
+Upload the tracked repository contents (excluding git-ignored source MP4s and MOVs) to any static host that can serve files with normal MIME types:
 
 - GitHub Pages
 - Azure Static Web Apps
@@ -80,7 +81,7 @@ For GitHub Pages, publish the `main` branch from the repository root (`/`). Afte
 https://<owner>.github.io/<repo>/
 ```
 
-Because all app navigation uses hash routes, deep links such as `https://<owner>.github.io/<repo>/#/watch` and `https://<owner>.github.io/<repo>/#/watch1` work without extra configuration.
+Because all app navigation uses hash routes, deep links such as `https://<owner>.github.io/<repo>/#/watch`, `#/watch1`, and `#/watch2` work without extra configuration.
 
 ## Key files
 
@@ -92,6 +93,7 @@ Because all app navigation uses hash routes, deep links such as `https://<owner>
 - `images/`, `images-pexels/` — bundled referenced image assets only
 - `videos/lisbon-pages.json`, `videos/lisbon-pages.part*` — compressed 4K MP4 with audio, split into GitHub-safe chunks and reassembled in browsers without native HLS
 - `videos/lisbon-pages-hls/` — the same compressed 4K H.264/AAC video packaged as native HLS for Safari, without assembling a whole-video blob in JavaScript memory
+- `videos/getty-images.mp4`, `videos/getty-images-poster.jpg` — browser-compatible GettyImages video and a poster extracted from that video for `#/watch2`
 - `PUBLIC-URLS.csv` — public URL inventory
 - `server.mjs` — tiny local static server
 
@@ -117,6 +119,20 @@ Commit both the replacement assets and deletion of superseded assets in the same
 
 Run the video regression tests with `node --test tests\video.test.mjs`.
 
+### GettyImages video delivery
+
+The supplied `GettyImages.mov` uses ProRes video and PCM audio and is over 1 GB. It remains local and git-ignored. The `#/watch2` page serves a smaller H.264/AAC MP4 directly, without downloading and assembling video chunks in JavaScript. The existing `#/watch` and `#/watch1` playback paths are unchanged.
+
+To regenerate the MP4 and poster with FFmpeg:
+
+```powershell
+ffmpeg -hide_banner -nostdin -i GettyImages.mov -map 0:v:0 -map 0:a:0 -c:v libx264 -preset veryfast -threads 4 -profile:v main -level:v 5.1 -pix_fmt yuv420p -b:v 12M -maxrate 16M -bufsize 24M -c:a aac -b:a 192k -movflags +faststart videos\getty-images.mp4
+ffmpeg -hide_banner -nostdin -ss 0.5 -i videos\getty-images.mp4 -frames:v 1 -vf "scale=1280:-2" -q:v 3 -update 1 videos\getty-images-poster.jpg
+```
+
+Deploy both generated files. The regression tests include them in the complete site's 800 MB size budget. Confirm that your GettyImages license permits the intended public web use before publishing; the supplied file's license details were not provided.
+
 ## Licensing and attribution
 
 Written content is original travel content. Bundled external media is documented in `IMAGE-ATTRIBUTION.md` and `IMAGE-ATTRIBUTION.csv`. Pexels media is included under the Pexels License; Wikimedia Commons media retains the individual license noted in the attribution ledger.
+The user-supplied GettyImages video and its extracted poster have unverified license details and are not represented as Pexels or Creative Commons assets.

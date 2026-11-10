@@ -131,13 +131,14 @@ test("the existing watch page keeps chunk playback even when native HLS is avail
   state.context.disposeLisbonVideo();
 });
 
-test("watch and watch1 select distinct modes and dispose the previous video", () => {
+test("all three watch routes select their own mode and dispose the previous video", () => {
   const modes = [];
   let disposed = 0;
   const context = {
     location: { hash: "#/watch" },
     disposeLisbonVideo: () => { disposed++; },
-    renderWatch: (safariCompatible = false) => modes.push(safariCompatible),
+    renderWatch: (safariCompatible = false, media = "lisbon") =>
+      modes.push({ safariCompatible, media }),
   };
   runInNewContext(source.slice(
     source.indexOf("function route()"),
@@ -148,11 +149,18 @@ test("watch and watch1 select distinct modes and dispose the previous video", ()
   context.disposeLisbonVideo = () => { disposed++; };
   context.location.hash = "#/watch1";
   context.route();
-  assert.deepEqual(modes, [false, true]);
-  assert.equal(disposed, 2);
+  context.disposeLisbonVideo = () => { disposed++; };
+  context.location.hash = "#/watch2";
+  context.route();
+  assert.deepEqual(modes, [
+    { safariCompatible: false, media: "lisbon" },
+    { safariCompatible: true, media: "lisbon" },
+    { safariCompatible: false, media: "getty" },
+  ]);
+  assert.equal(disposed, 3);
 });
 
-test("navigation exposes both video pages", () => {
+test("navigation exposes all three video pages", () => {
   const context = {};
   runInNewContext(source.slice(
     source.indexOf("function portalHeader("),
@@ -161,6 +169,52 @@ test("navigation exposes both video pages", () => {
   const header = context.portalHeader("watch1");
   assert.match(header, /href="#\/watch">Video</);
   assert.match(header, /class="active" href="#\/watch1">Video \(Safari\)</);
+  assert.match(header, /href="#\/watch2">GettyImages video</);
+  assert.match(context.portalHeader("watch2"), /class="active" href="#\/watch2"/);
+});
+
+test("GettyImages plays directly without loading Lisbon chunks or HLS", async () => {
+  for (const native of [true, false]) {
+    const state = setup({ native });
+    await state.context.loadLisbonVideo(false, "getty");
+    assert.equal(state.video.src, "videos/getty-images.mp4");
+    assert.equal(state.requests.length, 0);
+    assert.equal(state.blob, undefined);
+    state.video.dispatchEvent(new Event("loadeddata"));
+    assert.equal(state.nodes["#video-loading"].hidden, true);
+    state.video.dispatchEvent(new Event("waiting"));
+    assert.equal(state.nodes["#video-loading"].hidden, false);
+    state.video.dispatchEvent(new Event("playing"));
+    assert.equal(state.nodes["#video-loading"].hidden, true);
+    state.video.error = { code: 2, message: "Network error" };
+    state.video.dispatchEvent(new Event("error"));
+    assert.equal(state.nodes["#video-loading"].hidden, false);
+    assert.equal(state.errors[0], state.video.error);
+    state.context.disposeLisbonVideo();
+    assert.equal(state.video.src, "");
+    assert.equal(state.video.paused, true);
+    assert.equal(state.video.loadCalled, true);
+  }
+});
+
+test("GettyImages renderer retains full-bleed playback controls and uses its own poster", () => {
+  const context = {
+    document: {},
+    app: {},
+    loadLisbonVideo: (...args) => { context.loaded = args; },
+  };
+  runInNewContext(source.slice(
+    source.indexOf("function renderWatch("),
+    source.indexOf("async function loadLisbonVideo("),
+  ), context);
+  context.renderWatch(false, "getty");
+  assert.equal(context.document.title, "GettyImages Loop — Lisbon Atlas");
+  assert.match(context.app.innerHTML, /full-bleed-video/);
+  assert.match(context.app.innerHTML, /controls loop playsinline/);
+  assert.match(context.app.innerHTML, /poster="videos\/getty-images-poster\.jpg"/);
+  assert.match(context.app.innerHTML, /aria-label="Looping 4K GettyImages video"/);
+  assert.doesNotMatch(context.app.innerHTML, /\bautoplay\b/);
+  assert.deepEqual(context.loaded, [false, "getty"]);
 });
 
 test("leaving the video route cancels an in-flight manifest or chunk without an error", async () => {
@@ -262,7 +316,28 @@ test("MP4 chunks match the manifest and the complete site stays below 800 MB", (
     siteBytes += size;
   }
   assert.ok(siteBytes < 800_000_000, `Complete site is ${siteBytes} bytes`);
-  assert.ok(readdirSync(join(root, "videos")).every((name) => name.startsWith("lisbon-pages")));
+  const gettyFiles = ["getty-images.mp4", "getty-images-poster.jpg"];
+  assert.ok(readdirSync(join(root, "videos")).every((name) =>
+    name.startsWith("lisbon-pages") || gettyFiles.includes(name)));
+});
+
+test("GettyImages MP4 is under GitHub's file limit and has fast-start metadata", () => {
+  const mp4 = readFileSync(join(root, "videos", "getty-images.mp4"));
+  assert.ok(mp4.length > 0 && mp4.length < 100 * 1024 * 1024);
+  const boxes = [];
+  let offset = 0;
+  while (offset + 8 <= mp4.length) {
+    const size = mp4.readUInt32BE(offset);
+    assert.ok(size >= 8 && offset + size <= mp4.length);
+    boxes.push(mp4.toString("ascii", offset + 4, offset + 8));
+    offset += size;
+  }
+  assert.equal(offset, mp4.length);
+  assert.equal(boxes[0], "ftyp");
+  assert.ok(boxes.indexOf("moov") >= 0);
+  assert.ok(boxes.indexOf("moov") < boxes.indexOf("mdat"));
+  const poster = readFileSync(join(root, "videos", "getty-images-poster.jpg"));
+  assert.equal(poster.readUInt16BE(0), 0xffd8);
 });
 
 test("local server serves HLS MIME types, HEAD, and media byte ranges", async (t) => {
@@ -322,4 +397,21 @@ test("local server serves HLS MIME types, HEAD, and media byte ranges", async (t
   });
   assert.equal(segment.status, 200);
   assert.equal(segment.headers.get("content-type"), "video/mp4");
+  for (const [file, type] of [
+    ["getty-images.mp4", "video/mp4"],
+    ["getty-images-poster.jpg", "image/jpeg"],
+  ]) {
+    const response = await fetch(`${base}/videos/${file}`, { method: "HEAD" });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("content-type"), type);
+    assert.equal(response.headers.get("content-length"),
+      String(statSync(join(root, "videos", file)).size));
+  }
+  const gettyRange = await fetch(`${base}/videos/getty-images.mp4`, {
+    headers: { Range: "bytes=0-15" },
+  });
+  assert.equal(gettyRange.status, 206);
+  assert.equal(gettyRange.headers.get("content-type"), "video/mp4");
+  assert.deepEqual(Buffer.from(await gettyRange.arrayBuffer()),
+    readFileSync(join(root, "videos", "getty-images.mp4")).subarray(0, 16));
 });
